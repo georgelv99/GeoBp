@@ -7,14 +7,19 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
   <style>
     :root {
-      --bg: #f4f6f9;
+      --header-bg: #4a6b35;
+      --bg: #f1f5ec;
       --card: #ffffff;
       --text: #1f2937;
       --muted: #6b7280;
-      --primary: #2563eb;
-      --red: #ef4444;
-      --green: #10b981;
-      --border: #e5e7eb;
+      --primary: #4a6b35;
+      --pink-fab: #fad4e2;
+      --pink-text: #3d222e;
+      --red: #dc2626;
+      --orange: #d97706;
+      --green: #15803d;
+      --blue: #2563eb;
+      --border: #e5eadf;
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
@@ -22,117 +27,190 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
       background: var(--bg);
       color: var(--text);
-      padding-bottom: 90px;
+      padding-bottom: 92px;
     }
     header {
       position: sticky;
       top: 0;
       z-index: 20;
-      background: var(--card);
-      border-bottom: 1px solid var(--border);
-      padding: 12px 16px;
+      background: var(--header-bg);
+      color: #fff;
+      padding: 13px 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
     }
-    header h1 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+    header h1 { margin: 0; font-size: 19px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
     .sync-badge {
       font-size: 11px;
       padding: 2px 8px;
       border-radius: 99px;
-      background: #e0f2fe;
-      color: #0369a1;
-      font-weight: 500;
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      font-weight: 400;
     }
     .icon-btn {
-      background: #f3f4f6;
+      background: rgba(255,255,255,0.16);
       border: none;
       border-radius: 10px;
-      padding: 8px 12px;
+      padding: 7px 11px;
       font-size: 14px;
-      color: var(--text);
+      color: #fff;
       cursor: pointer;
     }
     .container { max-width: 640px; margin: 0 auto; padding: 12px; }
-    .card {
-      background: var(--card);
-      border-radius: 16px;
-      padding: 14px;
-      margin-bottom: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
-    .summary-grid {
+
+    /* 7日統計三張卡片 */
+    .stats-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
-      text-align: center;
+      margin-bottom: 12px;
     }
-    .summary-item { background: #f9fafb; border-radius: 12px; padding: 10px 6px; }
-    .summary-label { font-size: 12px; color: var(--muted); }
-    .summary-val { font-size: 24px; font-weight: 700; margin-top: 2px; }
-    .summary-unit { font-size: 11px; color: var(--muted); }
+    .stat-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 12px 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .stat-label { font-size: 12px; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
+    .stat-val {
+      font-size: clamp(17px, 5vw, 22px);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      white-space: nowrap;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+    .stat-sub {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
     .chart-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+      gap: 6px;
     }
-    .chart-title { font-size: 15px; font-weight: 600; }
-    .range-btns { display: flex; gap: 6px; }
+    .chart-title { font-size: 15px; font-weight: 600; color: var(--text); }
+    .range-btns { display: flex; gap: 4px; }
     .range-btn {
       border: 1px solid var(--border);
       background: #fff;
       color: var(--muted);
       border-radius: 8px;
-      padding: 4px 10px;
+      padding: 4px 8px;
       font-size: 12px;
       cursor: pointer;
     }
     .range-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    #chart { width: 100%; height: 290px; }
+    #chart { width: 100%; height: 280px; }
 
-    .list-title { font-size: 15px; font-weight: 600; margin: 4px 0 10px; display: flex; justify-content: space-between; }
-    .record-item {
-      border-top: 1px solid var(--border);
-      padding: 12px 0;
+    /* 紀錄列表（仿截圖左側狀態條） */
+    .list-header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .list-title { font-size: 15px; font-weight: 600; }
+    .record-item {
+      position: relative;
+      border-top: 1px solid var(--border);
+      padding: 12px 0 12px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       gap: 8px;
     }
-    .record-item:first-child { border-top: none; padding-top: 4px; }
-    .record-time { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-    .record-nums { font-size: 16px; font-weight: 700; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
-    .record-nums span small { font-weight: 400; font-size: 11px; color: var(--muted); margin-right: 2px; }
-    .record-note { font-size: 13px; color: #4b5563; margin-top: 4px; background: #f9fafb; padding: 4px 8px; border-radius: 6px; display: inline-block; }
-    .record-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .record-item:first-child { border-top: none; }
+    .status-bar {
+      position: absolute;
+      left: 0;
+      top: 10px;
+      bottom: 10px;
+      width: 4px;
+      border-radius: 4px;
+      background: var(--green);
+    }
+    .status-bar.bar-red { background: var(--red); }
+    .status-bar.bar-green { background: var(--green); }
+    .status-bar.bar-normal { background: #65a30d; }
+
+    .record-main { flex: 1; min-width: 0; }
+    .record-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .record-date { font-size: 14px; font-weight: 600; color: var(--text); }
+    .record-bp { font-size: 17px; font-weight: 700; white-space: nowrap; }
+    .record-bp small { font-size: 11px; font-weight: 400; color: var(--muted); margin-left: 2px; }
+    .record-meta {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .record-note {
+      font-size: 12px;
+      color: #4b5563;
+      margin-top: 5px;
+      background: var(--bg);
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+    .record-actions { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
     .btn-sm {
       border: 1px solid var(--border);
       background: #fff;
       border-radius: 8px;
-      padding: 6px 10px;
+      padding: 5px 10px;
       font-size: 12px;
       cursor: pointer;
     }
-    .btn-edit { color: var(--primary); border-color: #bfdbfe; background: #eff6ff; }
+    .btn-edit { color: var(--primary); border-color: #cbd9be; background: #f4f8ef; }
     .btn-del { color: var(--red); border-color: #fecaca; background: #fef2f2; }
 
+    /* 仿截圖右下角粉紅懸浮按鈕 */
     .fab {
       position: fixed;
       bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--primary);
-      color: #fff;
+      right: 18px;
+      background: var(--pink-fab);
+      color: var(--pink-text);
       border: none;
-      border-radius: 99px;
-      padding: 14px 28px;
-      font-size: 16px;
+      border-radius: 18px;
+      padding: 14px 22px;
+      font-size: 15px;
       font-weight: 600;
-      box-shadow: 0 6px 18px rgba(37,99,235,0.35);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.18);
       cursor: pointer;
       z-index: 30;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     /* Modal */
@@ -155,7 +233,7 @@
       animation: slideUp 0.2s ease-out;
     }
     @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    .modal h2 { margin: 0 0 14px; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
+    .modal h2 { margin: 0 0 14px; font-size: 18px; }
     .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
     .form-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
     .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
@@ -197,34 +275,33 @@
 </header>
 
 <div class="container">
-  <!-- 最新一筆摘要 -->
-  <div class="card">
-    <div class="summary-grid">
-      <div class="summary-item">
-        <div class="summary-label">最新收縮壓</div>
-        <div id="latestSys" class="summary-val">--</div>
-        <div class="summary-unit">mmHg</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-label">最新舒張壓</div>
-        <div id="latestDia" class="summary-val">--</div>
-        <div class="summary-unit">mmHg</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-label">最新心率</div>
-        <div id="latestHr" class="summary-val">--</div>
-        <div class="summary-unit">bpm</div>
-      </div>
+  <!-- 最近 7 日統計資料 -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">7 天平均</div>
+      <div id="statAvg" class="stat-val">--/--</div>
+      <div id="statAvgSub" class="stat-sub">mmHg</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">7 天最低</div>
+      <div id="statMin" class="stat-val">--/--</div>
+      <div id="statMinSub" class="stat-sub">尚無紀錄</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">7 天最高</div>
+      <div id="statMax" class="stat-val">--/--</div>
+      <div id="statMaxSub" class="stat-sub">尚無紀錄</div>
     </div>
   </div>
 
-  <!-- 折線圖卡片 -->
+  <!-- 趨勢折線圖 -->
   <div class="card">
     <div class="chart-header">
-      <div class="chart-title">趨勢折線圖</div>
+      <div id="chartTitle" class="chart-title">7 天趨勢</div>
       <div class="range-btns">
         <button class="range-btn" onclick="setZoomDays(5, this)">5天</button>
-        <button class="range-btn active" onclick="setZoomDays(14, this)">14天</button>
+        <button class="range-btn active" onclick="setZoomDays(7, this)">7天</button>
+        <button class="range-btn" onclick="setZoomDays(14, this)">14天</button>
         <button class="range-btn" onclick="setZoomDays(30, this)">30天</button>
       </div>
     </div>
@@ -233,15 +310,15 @@
 
   <!-- 歷史紀錄列表 -->
   <div class="card">
-    <div class="list-title">
-      <span>歷史紀錄</span>
-      <span id="recordCount" style="font-size:12px;color:var(--muted);font-weight:400;">0 筆</span>
+    <div class="list-header">
+      <span class="list-title">歷史紀錄</span>
+      <span id="recordCount" style="font-size:12px;color:var(--muted);">0 筆</span>
     </div>
     <div id="recordList"></div>
   </div>
 </div>
 
-<button class="fab" onclick="openRecordModal()">＋ 新增血壓紀錄</button>
+<button class="fab" onclick="openRecordModal()">＋ 新增紀錄</button>
 
 <!-- 新增 / 編輯視窗 -->
 <div id="recordModal" class="modal-backdrop">
@@ -274,7 +351,7 @@
     </div>
     <div class="field">
       <label>備註（選填，不顯示於折線圖）</label>
-      <input id="inputNote" type="text" class="text-left" placeholder="例如：起床量、剛運動完、有服藥..." />
+      <input id="inputNote" type="text" class="text-left" placeholder="例如：起床量、夜間、有服藥..." />
     </div>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeModal('recordModal')">取消</button>
@@ -289,19 +366,19 @@
     <h2>警戒值與備份設定</h2>
     <div class="form-grid-2">
       <div class="field">
-        <label>收縮壓大於（顯示紅色）</label>
+        <label>收縮壓大於（紅色）</label>
         <input id="cfgSysMax" type="number" inputmode="numeric" />
       </div>
       <div class="field">
-        <label>收縮壓小於（顯示綠色）</label>
+        <label>收縮壓小於（綠色）</label>
         <input id="cfgSysMin" type="number" inputmode="numeric" />
       </div>
       <div class="field">
-        <label>舒張壓大於（顯示紅色）</label>
+        <label>舒張壓大於（紅色）</label>
         <input id="cfgDiaMax" type="number" inputmode="numeric" />
       </div>
       <div class="field">
-        <label>舒張壓小於（顯示綠色）</label>
+        <label>舒張壓小於（綠色）</label>
         <input id="cfgDiaMin" type="number" inputmode="numeric" />
       </div>
     </div>
@@ -322,7 +399,7 @@
   const CONFIG_KEY = 'bp_config_v1';
 
   let records = [];
-  let currentZoomDays = 14;
+  let currentZoomDays = 7;
   let config = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {
     sysMax: 130,
     sysMin: 90,
@@ -333,19 +410,48 @@
   const chart = echarts.init(document.getElementById('chart'));
   window.addEventListener('resize', () => chart.resize());
 
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function formatDateObj(d) {
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
   function getNowFormatted() {
     const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const date = formatDateObj(now);
     const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const sec = pad(now.getSeconds());
     return { date, time, timestamp: `${date} ${time}:${sec}` };
+  }
+
+  function formatShortDateTime(dateStr, timeStr) {
+    const [, m, d] = dateStr.split('-');
+    return `${Number(m)}月${Number(d)}日 ${timeStr}`;
+  }
+
+  function formatListDate(dateStr) {
+    const today = formatDateObj(new Date());
+    const yestObj = new Date();
+    yestObj.setDate(yestObj.getDate() - 1);
+    const yesterday = formatDateObj(yestObj);
+    if (dateStr === today) return '今天';
+    if (dateStr === yesterday) return '昨天';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const weekNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+    const wk = weekNames[new Date(y, m - 1, d).getDay()];
+    return `${m}月${d}日 ${wk}`;
   }
 
   function getValueClass(val, max, min) {
     if (val > max) return 'text-red';
     if (val < min) return 'text-green';
     return '';
+  }
+
+  function formatColoredBP(sys, dia) {
+    const sysCls = getValueClass(sys, config.sysMax, config.sysMin);
+    const diaCls = getValueClass(dia, config.diaMax, config.diaMin);
+    return `<span class="${sysCls}">${sys}</span><span style="color:#9ca3af;font-weight:400;">/</span><span class="${diaCls}">${dia}</span>`;
   }
 
   function setStatus(text) {
@@ -383,26 +489,53 @@
 
   function renderAll() {
     records.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-    renderSummary();
+    renderSevenDayStats();
     renderChart();
     renderList();
   }
 
-  function renderSummary() {
-    const sysEl = document.getElementById('latestSys');
-    const diaEl = document.getElementById('latestDia');
-    const hrEl = document.getElementById('latestHr');
-    if (records.length === 0) {
-      sysEl.textContent = diaEl.textContent = hrEl.textContent = '--';
-      sysEl.className = diaEl.className = 'summary-val';
+  // 計算最近 7 日統計（含今天往前推 6 天）
+  function renderSevenDayStats() {
+    const startObj = new Date();
+    startObj.setDate(startObj.getDate() - 6);
+    const startDateStr = formatDateObj(startObj);
+
+    const recent = records.filter(r => r.date >= startDateStr);
+
+    const avgEl = document.getElementById('statAvg');
+    const avgSub = document.getElementById('statAvgSub');
+    const minEl = document.getElementById('statMin');
+    const minSub = document.getElementById('statMinSub');
+    const maxEl = document.getElementById('statMax');
+    const maxSub = document.getElementById('statMaxSub');
+
+    if (recent.length === 0) {
+      avgEl.innerHTML = minEl.innerHTML = maxEl.innerHTML = '--/--';
+      avgSub.textContent = '近7日無紀錄';
+      minSub.textContent = '尚無紀錄';
+      maxSub.textContent = '尚無紀錄';
       return;
     }
-    const last = records[records.length - 1];
-    sysEl.textContent = last.sys;
-    sysEl.className = 'summary-val ' + getValueClass(last.sys, config.sysMax, config.sysMin);
-    diaEl.textContent = last.dia;
-    diaEl.className = 'summary-val ' + getValueClass(last.dia, config.diaMax, config.diaMin);
-    hrEl.textContent = last.hr;
+
+    const avgSys = Math.round(recent.reduce((s, r) => s + r.sys, 0) / recent.length);
+    const avgDia = Math.round(recent.reduce((s, r) => s + r.dia, 0) / recent.length);
+    const avgHr = Math.round(recent.reduce((s, r) => s + r.hr, 0) / recent.length);
+
+    let minRec = recent[0];
+    let maxRec = recent[0];
+    for (const r of recent) {
+      if (r.sys < minRec.sys || (r.sys === minRec.sys && r.dia < minRec.dia)) minRec = r;
+      if (r.sys > maxRec.sys || (r.sys === maxRec.sys && r.dia > maxRec.dia)) maxRec = r;
+    }
+
+    avgEl.innerHTML = formatColoredBP(avgSys, avgDia);
+    avgSub.textContent = `${recent.length}筆 · 心率 ${avgHr}`;
+
+    minEl.innerHTML = formatColoredBP(minRec.sys, minRec.dia);
+    minSub.textContent = formatShortDateTime(minRec.date, minRec.time);
+
+    maxEl.innerHTML = formatColoredBP(maxRec.sys, maxRec.dia);
+    maxSub.textContent = formatShortDateTime(maxRec.date, maxRec.time);
   }
 
   function renderChart() {
@@ -410,12 +543,15 @@
     if (total === 0) {
       chart.clear();
       chart.setOption({
-        title: { text: '尚無資料，請點擊下方按鈕新增', left: 'center', top: 'center', textStyle: { color: '#9ca3af', fontSize: 14, fontWeight: 'normal' } }
+        title: { text: '尚無資料，請點擊右下角按鈕新增', left: 'center', top: 'center', textStyle: { color: '#9ca3af', fontSize: 14, fontWeight: 'normal' } }
       });
       return;
     }
 
-    const xLabels = records.map(r => r.date.slice(5).replace('-', '/'));
+    const xLabels = records.map(r => {
+      const [, m, d] = r.date.split('-');
+      return `${Number(m)}/${Number(d)}`;
+    });
     const sysData = records.map(r => r.sys);
     const diaData = records.map(r => r.dia);
     const hrData = records.map(r => r.hr);
@@ -424,49 +560,50 @@
     const startIdx = Math.max(0, total - currentZoomDays);
 
     chart.setOption({
-      animationDuration: 300,
+      animationDuration: 280,
       tooltip: {
         trigger: 'axis',
         formatter: params => {
           const idx = params[0].dataIndex;
           const r = records[idx];
-          let html = `<div style="font-weight:600;margin-bottom:4px;">${r.date}</div>`;
-          params.forEach(p => {
-            html += `<div style="display:flex;justify-content:space-between;gap:14px;">
-              <span>${p.marker}${p.seriesName}</span>
-              <span style="font-weight:700;">${p.value}</span>
-            </div>`;
-          });
-          return html;
+          return `
+            <div style="font-weight:600;margin-bottom:4px;">${r.date}</div>
+            <div style="display:flex;justify-content:space-between;gap:14px;"><span>收縮壓</span><b>${r.sys}</b></div>
+            <div style="display:flex;justify-content:space-between;gap:14px;"><span>舒張壓</span><b>${r.dia}</b></div>
+            <div style="display:flex;justify-content:space-between;gap:14px;"><span>心率</span><b>${r.hr}</b></div>
+          `;
         }
       },
       legend: {
-        top: 0,
+        bottom: 24,
         data: ['收縮壓', '舒張壓', '心率'],
-        textStyle: { fontSize: 12 }
+        selected: { '收縮壓': true, '舒張壓': true, '心率': false },
+        textStyle: { fontSize: 12, color: '#4b5563' },
+        itemWidth: 14,
+        itemHeight: 8
       },
-      grid: { left: 38, right: 14, top: 36, bottom: 48 },
+      grid: { left: 36, right: 16, top: 24, bottom: 72 },
       xAxis: {
         type: 'category',
         data: xLabels,
         axisLabel: { fontSize: 11, color: '#6b7280' },
-        axisLine: { lineStyle: { color: '#e5e7eb' } }
+        axisLine: { lineStyle: { color: '#d1d5db' } }
       },
       yAxis: {
         type: 'value',
         scale: true,
         min: v => Math.max(30, Math.floor((v.min - 10) / 10) * 10),
-        max: v => Math.ceil((v.max + 10) / 10) * 10,
+        max: v => Math.ceil((v.max + 12) / 10) * 10,
         axisLabel: { fontSize: 11, color: '#6b7280' },
-        splitLine: { lineStyle: { color: '#f3f4f6' } }
+        splitLine: { lineStyle: { color: '#f1f5ec' } }
       },
       visualMap: [
         {
           show: false,
           seriesIndex: 0,
           pieces: [
-            { gt: config.sysMax, color: '#ef4444' },
-            { gte: config.sysMin, lte: config.sysMax, color: '#2563eb' },
+            { gt: config.sysMax, color: '#dc2626' },
+            { gte: config.sysMin, lte: config.sysMax, color: '#4a6b35' },
             { lt: config.sysMin, color: '#10b981' }
           ]
         },
@@ -474,8 +611,8 @@
           show: false,
           seriesIndex: 1,
           pieces: [
-            { gt: config.diaMax, color: '#ef4444' },
-            { gte: config.diaMin, lte: config.diaMax, color: '#f59e0b' },
+            { gt: config.diaMax, color: '#dc2626' },
+            { gte: config.diaMin, lte: config.diaMax, color: '#2563eb' },
             { lt: config.diaMin, color: '#10b981' }
           ]
         }
@@ -492,13 +629,15 @@
         },
         {
           type: 'slider',
-          height: 18,
-          bottom: 4,
+          height: 16,
+          bottom: 2,
           startValue: startIdx,
           endValue: endIdx,
           minValueSpan: 4,
           maxValueSpan: 29,
-          showDetail: false
+          showDetail: false,
+          borderColor: '#e5eadf',
+          fillerColor: 'rgba(74, 107, 53, 0.18)'
         }
       ],
       series: [
@@ -506,26 +645,31 @@
           name: '收縮壓',
           type: 'line',
           data: sysData,
-          smooth: 0.2,
+          smooth: 0.15,
           symbol: 'circle',
-          symbolSize: 7,
-          lineStyle: { width: 2.5 }
+          symbolSize: 8,
+          lineStyle: { width: 2.5 },
+          label: { show: true, position: 'top', fontSize: 12, fontWeight: 600, color: '#1f2937' },
+          labelLayout: { hideOverlap: true }
         },
         {
           name: '舒張壓',
           type: 'line',
           data: diaData,
-          smooth: 0.2,
+          smooth: 0.15,
           symbol: 'circle',
-          symbolSize: 7,
-          lineStyle: { width: 2.5 }
+          symbolSize: 8,
+          lineStyle: { width: 2.5 },
+          label: { show: true, position: 'top', fontSize: 12, fontWeight: 600, color: '#1f2937' },
+          labelLayout: { hideOverlap: true }
         },
         {
           name: '心率',
           type: 'line',
           data: hrData,
-          smooth: 0.2,
-          symbol: 'none',
+          smooth: 0.15,
+          symbol: 'circle',
+          symbolSize: 5,
           itemStyle: { color: '#9ca3af' },
           lineStyle: { width: 1.5, type: 'dashed', color: '#9ca3af' }
         }
@@ -535,9 +679,16 @@
 
   function setZoomDays(days, btn) {
     currentZoomDays = days;
+    document.getElementById('chartTitle').textContent = `${days} 天趨勢`;
     document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     renderChart();
+  }
+
+  function getStatusBarClass(r) {
+    if (r.sys > config.sysMax || r.dia > config.diaMax) return 'bar-red';
+    if (r.sys < config.sysMin || r.dia < config.diaMin) return 'bar-green';
+    return 'bar-normal';
   }
 
   function renderList() {
@@ -550,12 +701,15 @@
     const reversed = [...records].reverse();
     listEl.innerHTML = reversed.map(r => `
       <div class="record-item">
-        <div>
-          <div class="record-time">${r.date} ${r.time}</div>
-          <div class="record-nums">
-            <span class="${getValueClass(r.sys, config.sysMax, config.sysMin)}"><small>收縮</small>${r.sys}</span>
-            <span class="${getValueClass(r.dia, config.diaMax, config.diaMin)}"><small>舒張</small>${r.dia}</span>
-            <span style="color:#4b5563;"><small>心率</small>${r.hr}</span>
+        <div class="status-bar ${getStatusBarClass(r)}"></div>
+        <div class="record-main">
+          <div class="record-top">
+            <span class="record-date">${formatListDate(r.date)}</span>
+            <span class="record-bp">${formatColoredBP(r.sys, r.dia)}<small>mmHg</small></span>
+          </div>
+          <div class="record-meta">
+            <span>🕒 ${r.time}</span>
+            <span>❤️ ${r.hr} bpm</span>
           </div>
           ${r.note ? `<div class="record-note">${escapeHtml(r.note)}</div>` : ''}
         </div>
@@ -634,7 +788,7 @@
       const updated = { ...target, sys, dia, hr, note };
       payload = { action: 'update', record: updated };
     } else {
-      const sec = String(new Date().getSeconds()).padStart(2, '0');
+      const sec = pad(new Date().getSeconds());
       const newRec = {
         id: String(Date.now()),
         timestamp: `${date} ${time}:${sec}`,
