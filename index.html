@@ -103,7 +103,7 @@
     }
     .record-item:first-child { border-top: none; padding-top: 4px; }
     .record-time { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-    .record-nums { font-size: 16px; font-weight: 700; display: flex; gap: 12px; align-items: baseline; }
+    .record-nums { font-size: 16px; font-weight: 700; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
     .record-nums span small { font-weight: 400; font-size: 11px; color: var(--muted); margin-right: 2px; }
     .record-note { font-size: 13px; color: #4b5563; margin-top: 4px; background: #f9fafb; padding: 4px 8px; border-radius: 6px; display: inline-block; }
     .record-actions { display: flex; gap: 6px; flex-shrink: 0; }
@@ -167,8 +167,11 @@
       border: 1px solid #d1d5db;
       border-radius: 10px;
       text-align: center;
+      background: #fff;
     }
+    .field input:disabled { background: #f3f4f6; color: var(--muted); }
     .field input.text-left { text-align: left; font-size: 15px; font-weight: 400; }
+    .field input.dt-input { font-size: 15px; font-weight: 500; }
     .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
     .btn-primary, .btn-cancel {
       flex: 1;
@@ -198,12 +201,12 @@
   <div class="card">
     <div class="summary-grid">
       <div class="summary-item">
-        <div class="summary-label">最新高壓</div>
+        <div class="summary-label">最新收縮壓</div>
         <div id="latestSys" class="summary-val">--</div>
         <div class="summary-unit">mmHg</div>
       </div>
       <div class="summary-item">
-        <div class="summary-label">最新低壓</div>
+        <div class="summary-label">最新舒張壓</div>
         <div id="latestDia" class="summary-val">--</div>
         <div class="summary-unit">mmHg</div>
       </div>
@@ -243,22 +246,29 @@
 <!-- 新增 / 編輯視窗 -->
 <div id="recordModal" class="modal-backdrop">
   <div class="modal">
-    <h2>
-      <span id="modalTitle">新增紀錄</span>
-      <span id="modalTimeBadge" style="font-size:12px;color:var(--muted);font-weight:400;"></span>
-    </h2>
+    <h2 id="modalTitle">新增紀錄</h2>
     <input type="hidden" id="editId" />
+    <div class="form-grid-2">
+      <div class="field">
+        <label>日期</label>
+        <input id="inputDate" type="date" class="dt-input" />
+      </div>
+      <div class="field">
+        <label>時間</label>
+        <input id="inputTime" type="time" class="dt-input" />
+      </div>
+    </div>
     <div class="form-grid">
       <div class="field">
-        <label>高壓 (收縮壓)</label>
+        <label>收縮壓</label>
         <input id="inputSys" type="number" inputmode="numeric" placeholder="120" />
       </div>
       <div class="field">
-        <label>低壓 (舒張壓)</label>
+        <label>舒張壓</label>
         <input id="inputDia" type="number" inputmode="numeric" placeholder="80" />
       </div>
       <div class="field">
-        <label>心率 (脈搏)</label>
+        <label>心率</label>
         <input id="inputHr" type="number" inputmode="numeric" placeholder="72" />
       </div>
     </div>
@@ -279,19 +289,19 @@
     <h2>警戒值與備份設定</h2>
     <div class="form-grid-2">
       <div class="field">
-        <label>高壓大於（顯示紅色）</label>
+        <label>收縮壓大於（顯示紅色）</label>
         <input id="cfgSysMax" type="number" inputmode="numeric" />
       </div>
       <div class="field">
-        <label>高壓小於（顯示綠色）</label>
+        <label>收縮壓小於（顯示綠色）</label>
         <input id="cfgSysMin" type="number" inputmode="numeric" />
       </div>
       <div class="field">
-        <label>低壓大於（顯示紅色）</label>
+        <label>舒張壓大於（顯示紅色）</label>
         <input id="cfgDiaMax" type="number" inputmode="numeric" />
       </div>
       <div class="field">
-        <label>低壓小於（顯示綠色）</label>
+        <label>舒張壓小於（顯示綠色）</label>
         <input id="cfgDiaMin" type="number" inputmode="numeric" />
       </div>
     </div>
@@ -323,7 +333,6 @@
   const chart = echarts.init(document.getElementById('chart'));
   window.addEventListener('resize', () => chart.resize());
 
-  // 取得格式化後的當下時間（YYYY-MM-DD HH:mm:ss）
   function getNowFormatted() {
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
@@ -343,7 +352,6 @@
     document.getElementById('syncStatus').textContent = text;
   }
 
-  // 初始化載入：先讀本機快取秒開，背景再同步 GAS
   async function init() {
     const cached = localStorage.getItem(STORAGE_KEY);
     if (cached) {
@@ -374,7 +382,6 @@
   }
 
   function renderAll() {
-    // 依時間戳由舊到新排序（供折線圖使用）
     records.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
     renderSummary();
     renderChart();
@@ -408,13 +415,11 @@
       return;
     }
 
-    // X 軸只顯示 MM/DD，同日多筆依先後順序排列
     const xLabels = records.map(r => r.date.slice(5).replace('-', '/'));
     const sysData = records.map(r => r.sys);
     const diaData = records.map(r => r.dia);
     const hrData = records.map(r => r.hr);
 
-    // 計算初始顯示區間（固定顯示最新 N 筆，並鎖定最少 5 筆、最多 30 筆）
     const endIdx = total - 1;
     const startIdx = Math.max(0, total - currentZoomDays);
 
@@ -425,7 +430,6 @@
         formatter: params => {
           const idx = params[0].dataIndex;
           const r = records[idx];
-          // 僅呈現日期與數值，不呈現備註
           let html = `<div style="font-weight:600;margin-bottom:4px;">${r.date}</div>`;
           params.forEach(p => {
             html += `<div style="display:flex;justify-content:space-between;gap:14px;">
@@ -438,7 +442,7 @@
       },
       legend: {
         top: 0,
-        data: ['高壓', '低壓', '心率'],
+        data: ['收縮壓', '舒張壓', '心率'],
         textStyle: { fontSize: 12 }
       },
       grid: { left: 38, right: 14, top: 36, bottom: 48 },
@@ -456,7 +460,6 @@
         axisLabel: { fontSize: 11, color: '#6b7280' },
         splitLine: { lineStyle: { color: '#f3f4f6' } }
       },
-      // 獨立設定高壓、低壓的紅綠變色區間
       visualMap: [
         {
           show: false,
@@ -482,8 +485,8 @@
           type: 'inside',
           startValue: startIdx,
           endValue: endIdx,
-          minValueSpan: 4,   // 最少顯示 5 筆（索引差 4）
-          maxValueSpan: 29,  // 最多顯示 30 筆（索引差 29）
+          minValueSpan: 4,
+          maxValueSpan: 29,
           zoomOnMouseWheel: true,
           moveOnMouseMove: true
         },
@@ -500,7 +503,7 @@
       ],
       series: [
         {
-          name: '高壓',
+          name: '收縮壓',
           type: 'line',
           data: sysData,
           smooth: 0.2,
@@ -509,7 +512,7 @@
           lineStyle: { width: 2.5 }
         },
         {
-          name: '低壓',
+          name: '舒張壓',
           type: 'line',
           data: diaData,
           smooth: 0.2,
@@ -544,16 +547,15 @@
       listEl.innerHTML = '<div class="empty-tip">目前沒有任何血壓紀錄</div>';
       return;
     }
-    // 列表由新到舊排列
     const reversed = [...records].reverse();
     listEl.innerHTML = reversed.map(r => `
       <div class="record-item">
         <div>
           <div class="record-time">${r.date} ${r.time}</div>
           <div class="record-nums">
-            <span class="${getValueClass(r.sys, config.sysMax, config.sysMin)}"><small>高</small>${r.sys}</span>
-            <span class="${getValueClass(r.dia, config.diaMax, config.diaMin)}"><small>低</small>${r.dia}</span>
-            <span style="color:#4b5563;"><small>心</small>${r.hr}</span>
+            <span class="${getValueClass(r.sys, config.sysMax, config.sysMin)}"><small>收縮</small>${r.sys}</span>
+            <span class="${getValueClass(r.dia, config.diaMax, config.diaMin)}"><small>舒張</small>${r.dia}</span>
+            <span style="color:#4b5563;"><small>心率</small>${r.hr}</span>
           </div>
           ${r.note ? `<div class="record-note">${escapeHtml(r.note)}</div>` : ''}
         </div>
@@ -569,7 +571,6 @@
     return str.replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
   }
 
-  // 開啟新增或修改視窗
   function openRecordModal(id = null) {
     const isEdit = Boolean(id);
     document.getElementById('editId').value = id || '';
@@ -578,14 +579,20 @@
     if (isEdit) {
       const r = records.find(item => item.id === id);
       if (!r) return;
-      document.getElementById('modalTimeBadge').textContent = `${r.date} ${r.time}`;
+      document.getElementById('inputDate').value = r.date;
+      document.getElementById('inputTime').value = r.time;
+      document.getElementById('inputDate').disabled = true;
+      document.getElementById('inputTime').disabled = true;
       document.getElementById('inputSys').value = r.sys;
       document.getElementById('inputDia').value = r.dia;
       document.getElementById('inputHr').value = r.hr;
       document.getElementById('inputNote').value = r.note || '';
     } else {
       const now = getNowFormatted();
-      document.getElementById('modalTimeBadge').textContent = `${now.date} ${now.time}`;
+      document.getElementById('inputDate').value = now.date;
+      document.getElementById('inputTime').value = now.time;
+      document.getElementById('inputDate').disabled = false;
+      document.getElementById('inputTime').disabled = false;
       document.getElementById('inputSys').value = '';
       document.getElementById('inputDia').value = '';
       document.getElementById('inputHr').value = '';
@@ -601,13 +608,19 @@
 
   async function saveRecord() {
     const id = document.getElementById('editId').value;
+    const date = document.getElementById('inputDate').value;
+    const time = document.getElementById('inputTime').value;
     const sys = Number(document.getElementById('inputSys').value);
     const dia = Number(document.getElementById('inputDia').value);
     const hr = Number(document.getElementById('inputHr').value);
     const note = document.getElementById('inputNote').value.trim();
 
+    if (!date || !time) {
+      alert('請選擇日期與時間');
+      return;
+    }
     if (!sys || !dia || !hr) {
-      alert('請完整輸入高壓、低壓與心率數值');
+      alert('請完整輸入收縮壓、舒張壓與心率數值');
       return;
     }
 
@@ -621,12 +634,12 @@
       const updated = { ...target, sys, dia, hr, note };
       payload = { action: 'update', record: updated };
     } else {
-      const now = getNowFormatted();
+      const sec = String(new Date().getSeconds()).padStart(2, '0');
       const newRec = {
         id: String(Date.now()),
-        timestamp: now.timestamp,
-        date: now.date,
-        time: now.time,
+        timestamp: `${date} ${time}:${sec}`,
+        date,
+        time,
         sys, dia, hr, note
       };
       payload = { action: 'add', record: newRec };
