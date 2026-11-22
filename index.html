@@ -7,19 +7,19 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
   <style>
     :root {
-      --header-bg: #4a6b35;
-      --bg: #f1f5ec;
+      --header-bg: #1d4ed8;
+      --bg: #eff6ff;
       --card: #ffffff;
       --text: #1f2937;
       --muted: #6b7280;
-      --primary: #4a6b35;
-      --pink-fab: #fad4e2;
-      --pink-text: #3d222e;
+      --primary: #2563eb;
+      --fab-bg: #bfdbfe;
+      --fab-text: #1e3a8a;
+      --edit-bg: #eff6ff;
+      --edit-border: #bfdbfe;
       --red: #dc2626;
-      --orange: #d97706;
-      --green: #15803d;
-      --blue: #2563eb;
-      --border: #e5eadf;
+      --green: #10b981;
+      --border: #dbeafe;
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
@@ -28,6 +28,7 @@
       background: var(--bg);
       color: var(--text);
       padding-bottom: 92px;
+      transition: background-color 0.25s ease;
     }
     header {
       position: sticky;
@@ -40,8 +41,9 @@
       justify-content: space-between;
       align-items: center;
       box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      transition: background-color 0.25s ease;
     }
-    header h1 { margin: 0; font-size: 19px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    header h1 { margin: 0; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
     .sync-badge {
       font-size: 11px;
       padding: 2px 8px;
@@ -50,12 +52,13 @@
       color: #fff;
       font-weight: 400;
     }
+    .header-actions { display: flex; gap: 6px; }
     .icon-btn {
-      background: rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.18);
       border: none;
       border-radius: 10px;
-      padding: 7px 11px;
-      font-size: 14px;
+      padding: 7px 10px;
+      font-size: 13px;
       color: #fff;
       cursor: pointer;
     }
@@ -109,20 +112,20 @@
       gap: 6px;
     }
     .chart-title { font-size: 15px; font-weight: 600; color: var(--text); }
-    .range-btns { display: flex; gap: 4px; }
+    .range-btns { display: flex; gap: 6px; }
     .range-btn {
       border: 1px solid var(--border);
       background: #fff;
       color: var(--muted);
       border-radius: 8px;
-      padding: 4px 8px;
+      padding: 4px 10px;
       font-size: 12px;
       cursor: pointer;
     }
     .range-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     #chart { width: 100%; height: 280px; }
 
-    /* 紀錄列表（仿截圖左側狀態條） */
+    /* 紀錄列表 */
     .list-header {
       display: flex;
       justify-content: space-between;
@@ -147,11 +150,11 @@
       bottom: 10px;
       width: 4px;
       border-radius: 4px;
-      background: var(--green);
+      background: var(--primary);
     }
     .status-bar.bar-red { background: var(--red); }
     .status-bar.bar-green { background: var(--green); }
-    .status-bar.bar-normal { background: #65a30d; }
+    .status-bar.bar-normal { background: var(--primary); }
 
     .record-main { flex: 1; min-width: 0; }
     .record-top {
@@ -190,16 +193,16 @@
       font-size: 12px;
       cursor: pointer;
     }
-    .btn-edit { color: var(--primary); border-color: #cbd9be; background: #f4f8ef; }
+    .btn-edit { color: var(--primary); border-color: var(--edit-border); background: var(--edit-bg); }
     .btn-del { color: var(--red); border-color: #fecaca; background: #fef2f2; }
 
-    /* 仿截圖右下角粉紅懸浮按鈕 */
+    /* 右下角懸浮按鈕 */
     .fab {
       position: fixed;
       bottom: 20px;
       right: 18px;
-      background: var(--pink-fab);
-      color: var(--pink-text);
+      background: var(--fab-bg);
+      color: var(--fab-text);
       border: none;
       border-radius: 18px;
       padding: 14px 22px;
@@ -211,7 +214,26 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      transition: background-color 0.25s ease, color 0.25s ease;
     }
+
+    /* 主題切換提示 */
+    .toast {
+      position: fixed;
+      top: 66px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(31, 41, 55, 0.88);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 99px;
+      font-size: 12px;
+      z-index: 60;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .toast.show { opacity: 1; }
 
     /* Modal */
     .modal-backdrop {
@@ -271,8 +293,13 @@
 
 <header>
   <h1>血壓紀錄 <span id="syncStatus" class="sync-badge">讀取中</span></h1>
-  <button class="icon-btn" onclick="openSettings()">⚙️ 設定</button>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="cycleTheme()" title="切換色系">🎨</button>
+    <button class="icon-btn" onclick="openSettings()">⚙️ 設定</button>
+  </div>
 </header>
+
+<div id="toast" class="toast"></div>
 
 <div class="container">
   <!-- 最近 7 日統計資料 -->
@@ -299,7 +326,6 @@
     <div class="chart-header">
       <div id="chartTitle" class="chart-title">7 天趨勢</div>
       <div class="range-btns">
-        <button class="range-btn" onclick="setZoomDays(5, this)">5天</button>
         <button class="range-btn active" onclick="setZoomDays(7, this)">7天</button>
         <button class="range-btn" onclick="setZoomDays(14, this)">14天</button>
         <button class="range-btn" onclick="setZoomDays(30, this)">30天</button>
@@ -391,15 +417,83 @@
 </div>
 
 <script>
-  // ▼▼▼ 請將這裡換成你的 Google Apps Script 網頁應用程式網址 ▼▼▼
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzlyGc8ZQtteJjvfuZ0xoqRS_1rBj_HBElXefuJjLfJ2KbSCuYw2eJUjwMPt82ke5Ro/exec";
-  // ▲▲▲ 留空時會自動以手機本機 localStorage 運作，方便先測試 ▲▲▲
 
   const STORAGE_KEY = 'bp_records_v1';
   const CONFIG_KEY = 'bp_config_v1';
+  const THEME_KEY = 'bp_theme_v1';
+
+  // 四組主題色系（預設為海洋藍）
+  const THEMES = {
+    blue: {
+      name: '海洋藍',
+      headerBg: '#1d4ed8',
+      bg: '#eff6ff',
+      primary: '#2563eb',
+      border: '#dbeafe',
+      fabBg: '#bfdbfe',
+      fabText: '#1e3a8a',
+      editBg: '#eff6ff',
+      editBorder: '#bfdbfe',
+      sysColor: '#2563eb',
+      diaColor: '#0891b2',
+      sliderFiller: 'rgba(37, 99, 235, 0.18)',
+      splitLine: '#eff6ff'
+    },
+    green: {
+      name: '橄欖綠',
+      headerBg: '#4a6b35',
+      bg: '#f1f5ec',
+      primary: '#4a6b35',
+      border: '#e5eadf',
+      fabBg: '#fad4e2',
+      fabText: '#3d222e',
+      editBg: '#f4f8ef',
+      editBorder: '#cbd9be',
+      sysColor: '#4a6b35',
+      diaColor: '#2563eb',
+      sliderFiller: 'rgba(74, 107, 53, 0.18)',
+      splitLine: '#f1f5ec'
+    },
+    purple: {
+      name: '薰衣草紫',
+      headerBg: '#6d28d9',
+      bg: '#f5f3ff',
+      primary: '#7c3aed',
+      border: '#ede9fe',
+      fabBg: '#ddd6fe',
+      fabText: '#4c1d95',
+      editBg: '#f5f3ff',
+      editBorder: '#ddd6fe',
+      sysColor: '#7c3aed',
+      diaColor: '#db2777',
+      sliderFiller: 'rgba(124, 58, 237, 0.18)',
+      splitLine: '#f5f3ff'
+    },
+    slate: {
+      name: '沉穩灰',
+      headerBg: '#334155',
+      bg: '#f1f5f9',
+      primary: '#475569',
+      border: '#e2e8f0',
+      fabBg: '#cbd5e1',
+      fabText: '#0f172a',
+      editBg: '#f8fafc',
+      editBorder: '#cbd5e1',
+      sysColor: '#334155',
+      diaColor: '#0f766e',
+      sliderFiller: 'rgba(51, 65, 85, 0.18)',
+      splitLine: '#f1f5f9'
+    }
+  };
+  const THEME_ORDER = ['blue', 'green', 'purple', 'slate'];
+
+  let currentTheme = localStorage.getItem(THEME_KEY) || 'blue';
+  if (!THEMES[currentTheme]) currentTheme = 'blue';
 
   let records = [];
   let currentZoomDays = 7;
+  let toastTimer = null;
   let config = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {
     sysMax: 130,
     sysMin: 90,
@@ -409,6 +503,37 @@
 
   const chart = echarts.init(document.getElementById('chart'));
   window.addEventListener('resize', () => chart.resize());
+
+  function applyTheme(key, showNotice = false) {
+    currentTheme = key;
+    const t = THEMES[key];
+    const root = document.documentElement.style;
+    root.setProperty('--header-bg', t.headerBg);
+    root.setProperty('--bg', t.bg);
+    root.setProperty('--primary', t.primary);
+    root.setProperty('--border', t.border);
+    root.setProperty('--fab-bg', t.fabBg);
+    root.setProperty('--fab-text', t.fabText);
+    root.setProperty('--edit-bg', t.editBg);
+    root.setProperty('--edit-border', t.editBorder);
+    localStorage.setItem(THEME_KEY, key);
+
+    if (records.length > 0) renderChart();
+    if (showNotice) showToast(`主題已切換為：${t.name}`);
+  }
+
+  function cycleTheme() {
+    const nextIdx = (THEME_ORDER.indexOf(currentTheme) + 1) % THEME_ORDER.length;
+    applyTheme(THEME_ORDER[nextIdx], true);
+  }
+
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
+  }
 
   function pad(n) { return String(n).padStart(2, '0'); }
 
@@ -459,6 +584,8 @@
   }
 
   async function init() {
+    applyTheme(currentTheme, false);
+
     const cached = localStorage.getItem(STORAGE_KEY);
     if (cached) {
       records = JSON.parse(cached);
@@ -494,7 +621,6 @@
     renderList();
   }
 
-  // 計算最近 7 日統計（含今天往前推 6 天）
   function renderSevenDayStats() {
     const startObj = new Date();
     startObj.setDate(startObj.getDate() - 6);
@@ -548,6 +674,7 @@
       return;
     }
 
+    const t = THEMES[currentTheme];
     const xLabels = records.map(r => {
       const [, m, d] = r.date.split('-');
       return `${Number(m)}/${Number(d)}`;
@@ -595,7 +722,7 @@
         min: v => Math.max(30, Math.floor((v.min - 10) / 10) * 10),
         max: v => Math.ceil((v.max + 12) / 10) * 10,
         axisLabel: { fontSize: 11, color: '#6b7280' },
-        splitLine: { lineStyle: { color: '#f1f5ec' } }
+        splitLine: { lineStyle: { color: t.splitLine } }
       },
       visualMap: [
         {
@@ -603,7 +730,7 @@
           seriesIndex: 0,
           pieces: [
             { gt: config.sysMax, color: '#dc2626' },
-            { gte: config.sysMin, lte: config.sysMax, color: '#4a6b35' },
+            { gte: config.sysMin, lte: config.sysMax, color: t.sysColor },
             { lt: config.sysMin, color: '#10b981' }
           ]
         },
@@ -612,7 +739,7 @@
           seriesIndex: 1,
           pieces: [
             { gt: config.diaMax, color: '#dc2626' },
-            { gte: config.diaMin, lte: config.diaMax, color: '#2563eb' },
+            { gte: config.diaMin, lte: config.diaMax, color: t.diaColor },
             { lt: config.diaMin, color: '#10b981' }
           ]
         }
@@ -636,8 +763,8 @@
           minValueSpan: 4,
           maxValueSpan: 29,
           showDetail: false,
-          borderColor: '#e5eadf',
-          fillerColor: 'rgba(74, 107, 53, 0.18)'
+          borderColor: t.border,
+          fillerColor: t.sliderFiller
         }
       ],
       series: [
@@ -648,6 +775,7 @@
           smooth: 0.15,
           symbol: 'circle',
           symbolSize: 8,
+          itemStyle: { color: t.sysColor },
           lineStyle: { width: 2.5 },
           label: { show: true, position: 'top', fontSize: 12, fontWeight: 600, color: '#1f2937' },
           labelLayout: { hideOverlap: true }
@@ -659,6 +787,7 @@
           smooth: 0.15,
           symbol: 'circle',
           symbolSize: 8,
+          itemStyle: { color: t.diaColor },
           lineStyle: { width: 2.5 },
           label: { show: true, position: 'top', fontSize: 12, fontWeight: 600, color: '#1f2937' },
           labelLayout: { hideOverlap: true }
